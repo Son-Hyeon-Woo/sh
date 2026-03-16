@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import Script from 'next/script';
 
 // Declare naver global object to avoid TS errors
 declare global {
@@ -27,30 +28,6 @@ export default function NaverMap({ locations }: NaverMapProps) {
   const mapElement = useRef<HTMLDivElement>(null);
   const [isScriptLoaded, setIsScriptLoaded] = useState(false);
 
-  // Load Naver Map Script
-  useEffect(() => {
-    // Prevent loading script twice
-    if (document.getElementById('naver-map-script') || window.naver) {
-      if (window.naver && window.naver.maps) setIsScriptLoaded(true);
-      return;
-    }
-
-    const script = document.createElement('script');
-    script.id = 'naver-map-script';
-    // Using process.env.NEXT_PUBLIC_NAVER_CLIENT_ID 
-    script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpClientId=${process.env.NEXT_PUBLIC_NAVER_CLIENT_ID}`;
-    script.async = true;
-    script.onload = () => {
-      // Small timeout to ensure naver object is fully mapped to window
-      setTimeout(() => {
-        setIsScriptLoaded(true);
-      }, 100);
-    };
-    script.onerror = () => console.error('Failed to load Naver Maps SDK');
-    document.head.appendChild(script);
-
-    return () => {};
-  }, []);
 
   // Initialize Map
   useEffect(() => {
@@ -132,13 +109,21 @@ export default function NaverMap({ locations }: NaverMapProps) {
   }, [isScriptLoaded, locations]);
 
   return (
-    <div className="w-full h-full relative">
-      <div ref={mapElement} className="w-full h-full" id="map" />
-      {!isScriptLoaded && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-50 bg-opacity-75 z-10">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-        </div>
-      )}
-    </div>
+    <>
+      <Script
+        strategy="afterInteractive"
+        src={`https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=${process.env.NEXT_PUBLIC_NAVER_CLIENT_ID}`}
+        onReady={() => setIsScriptLoaded(true)}
+        onError={() => console.error('Failed to load Naver Maps SDK')}
+      />
+      <div className="w-full h-full relative">
+        <div ref={mapElement} className="w-full h-full" id="map" />
+        {!isScriptLoaded && (
+          <div className="absolute inset-0 flex items-center justify-center bg-gray-50 bg-opacity-75 z-10">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          </div>
+        )}
+      </div>
+    </>
   );
 }
