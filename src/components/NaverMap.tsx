@@ -18,6 +18,8 @@ interface Location {
   rooms: string;
   lat: string;
   lng: string;
+  deposit?: string;
+  rent?: string;
 }
 
 interface NaverMapProps {
@@ -67,8 +69,13 @@ export default function NaverMap({ locations }: NaverMapProps) {
 
       // HTML content for InfoWindow
       const contentString = `
-        <div class="p-4 bg-white rounded-lg shadow-sm border border-gray-100 max-w-xs">
-            <h3 class="font-bold text-gray-900 text-sm mb-1">
+        <div class="p-4 bg-white rounded-lg shadow-sm border border-gray-100 max-w-xs relative">
+            <button onclick="document.dispatchEvent(new CustomEvent('closeInfoWindow', {detail: ${index}}))" class="absolute top-3 right-3 text-gray-400 hover:text-gray-600 transition-colors" aria-label="Close">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+            <h3 class="font-bold text-gray-900 text-sm mb-1 pr-4">
                <span class="inline-block bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs mr-1">${loc.gu}</span>
                ${loc.address.split('(')[0]}
             </h3>
@@ -78,6 +85,12 @@ export default function NaverMap({ locations }: NaverMapProps) {
                    <p><span class="font-medium text-gray-500">면적:</span> ${loc.area}㎡</p>
                    <p><span class="font-medium text-gray-500">방 수:</span> ${loc.rooms}개</p>
                </div>
+               ${loc.deposit || loc.rent ? `
+               <div class="flex flex-col mt-2 pt-2 border-t border-gray-50 space-y-1">
+                   ${loc.deposit ? `<p><span class="font-medium text-gray-500 bg-yellow-50 px-1 py-0.5 rounded mr-1">보증금</span> <span class="text-gray-900 font-semibold">${loc.deposit}</span>원</p>` : ''}
+                   ${loc.rent ? `<p><span class="font-medium text-gray-500 bg-green-50 px-1 py-0.5 rounded mr-1">월세</span> <span class="text-gray-900 font-semibold">${loc.rent}</span>원</p>` : ''}
+               </div>
+               ` : ''}
             </div>
         </div>
       `;
@@ -95,9 +108,6 @@ export default function NaverMap({ locations }: NaverMapProps) {
 
       // On marker click
       window.naver.maps.Event.addListener(marker, "click", (e: any) => {
-        // Close all other info windows first
-        infoWindows.forEach(iw => iw.close());
-        
         if (infoWindow.getMap()) {
           infoWindow.close();
         } else {
@@ -106,6 +116,20 @@ export default function NaverMap({ locations }: NaverMapProps) {
       });
     });
 
+    // Event listener for InfoWindow close buttons via CustomEvent
+    const handleCloseEvent = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const idx = customEvent.detail;
+      if (typeof idx === 'number' && infoWindows[idx]) {
+        infoWindows[idx].close();
+      }
+    };
+
+    document.addEventListener('closeInfoWindow', handleCloseEvent);
+
+    return () => {
+      document.removeEventListener('closeInfoWindow', handleCloseEvent);
+    };
   }, [isScriptLoaded, locations]);
 
   return (
